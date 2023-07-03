@@ -117,7 +117,24 @@ contract AutomatedMarkteMaker {
         );
     }
 
-    function removeLiquidity() external {}
+    function removeLiquidity(
+        uint _shares
+    ) external returns (uint amount0, uint amount1) {
+        // calculate the amount0 and amount1 to withdraw
+        //amount of token going out-dx =Shares/TotalShares * X-amount of token0-
+        // dy =S/T * Y
+        uint bal0 = i_token0.balanceOf(address(this));
+        uint bal1 = i_token1.balanceOf(address(this));
+
+        amount0 = (_shares * bal0) / totalSupply;
+        amount1 = (_shares * bal1) / totalSupply;
+
+        require(amount1 > 0 && amount1 > 1, "amount1 or amunt0 is eqaul to 0");
+        _burn(msg.sender, _shares);
+        _update(bal0 - amount0, bal1 - amount1);
+        i_token0.transfer(msg.sender, amount0);
+        i_token1.transfer(msg.sender, amount1);
+    }
 
     function _sqrt(uint y) private pure returns (uint z) {
         if (y > 3) {
