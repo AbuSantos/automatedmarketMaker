@@ -82,7 +82,59 @@ contract AutomatedMarkteMaker {
         );
     }
 
-    function addLiquidity() external {}
+    function addLiquidity(
+        uint _amount0,
+        uint _amount1
+    ) external returns (uint shares) {
+        i_token0.transferFrom(msg.sender, address(this), _amount0);
+        i_token1.transferFrom(msg.sender, address(this), _amount1);
+
+        //checking to see the amoiuntv of token sent in so not to distabilize the contract
+        // dy/dx =y/x
+        if (reserve0 > 0 || reserve1 > 0) {
+            require(reserve0 * _amount1 == reserve1 * _amount0, "dy/dx != y/x");
+        }
+
+        //Mint shares
+        // for the shares to mint, their are two parts, if totalshares is equal to 0 and when totalshares is greater than 0
+        // f=(x,y) =value of Liquidity = sqrt(xy)
+        // shares = dx/x * t = dy/y*t where T= total supply
+
+        if (totalSupply == 0) {
+            shares = _sqrt(_amount0 * _amount1);
+        } else {
+            shares = _min(
+                (_amount0 * totalSupply) / reserve0,
+                (_amount1 * totalSupply) / reserve1
+            );
+        }
+
+        require(shares > 0, "Shares is less than 0");
+        _mint(msg.sender, shares);
+        _update(
+            i_token0.balanceOf(address(this)),
+            i_token1.balanceOf(address(this))
+        );
+    }
 
     function removeLiquidity() external {}
+
+    function _sqrt(uint y) private pure returns (uint z) {
+        if (y > 3) {
+            z = y;
+            uint x = y / 2 + 1;
+            while (x < z) {
+                z = x;
+                x = (y / x + x) / 2;
+            }
+        } else if (y != 0) {
+            z = 1;
+        }
+    }
+
+    // returns the minimum between x and y
+
+    function _min(uint x, uint y) private pure returns (uint) {
+        return x <= y ? x : y;
+    }
 }
